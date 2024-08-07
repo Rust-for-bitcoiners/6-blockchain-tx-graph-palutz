@@ -63,12 +63,42 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
         }
     }
 
+    fn path_bfs(&self, start: &T, dest: &T) -> bool {
+        // fill the tovisit with the first neighbours
+        let start_vec : Vec<Rc<T>> = self.neighbors(start).iter().map(|n| n.clone()).collect();
+        let mut tovisit : VecDeque<Rc<T>> = VecDeque::from(start_vec);
+        let mut visited : HashSet<Rc<T>> = HashSet::new();
+        let mut res : bool = false;
+
+        while let Some(node) = tovisit.front() {
+            println!("while let, and size = {}", tovisit.len());
+            if **node == *dest {
+                println!("node found");
+                res = true;
+                break;
+            }
+            let next_nodes : Vec<Rc<T>> = self.neighbors(node).iter().map(|n| n.clone()).collect();
+            for nn in next_nodes {
+                println!("nn in next_nodes");
+                if *nn == *dest {
+                    println!("for, node found");
+                    res = true;
+                    break;
+                }
+                if tovisit.contains(&nn) == false {
+                    tovisit.push_back(nn);
+                }
+            }
+            if res {
+                println!("if for, node found");
+                break;
+            }
+        }
+        res
+    }
+
     pub fn path_exists_between(&self, u: &T, v: &T) -> bool {
-        // Use bfs or dfs
-        // bfs requires a queue data structure refer https://doc.rust-lang.org/std/collections/struct.VecDeque.html
-        // dfs requires recursion
-        // in both cases keep track of visited nodes using HashSet
-        todo!();
+        self.path_bfs(u, v)
     }
 }
 
