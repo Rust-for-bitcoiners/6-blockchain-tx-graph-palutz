@@ -14,40 +14,53 @@ pub struct Graph<T> {
 
 impl<T: Eq + PartialEq + Hash> Graph<T> {
     pub fn new() -> Graph<T> {
-        todo!();
+        Self {
+            edges : HashMap::new(),
+        }
     }
 
     pub fn vertices(&self) -> Vec<Rc<T>> {
-        todo!();
+        self.edges.keys().map(|k| k.clone()).collect()
     }
 
     pub fn insert_vertex(&mut self, u: T) {
-        todo!();
+        self.edges.entry(Rc::new(u)).or_insert(HashSet::new());
     }
 
     pub fn insert_edge(&mut self, u: T, v: T) {
         // node u can already be in the HashMap or it is not in the HashMap
-        todo!();
+        let k = Rc::new(u);
+        let rv = Rc::new(v);
+        self.edges.entry(k).and_modify(|kv| { kv.insert(rv); }).or_insert(HashSet::new());
     }
 
     pub fn remove_edge(&mut self, u: &T, v: &T) {
-        todo!();
+        let _ = match self.edges.get_mut(u) {
+            Some(kv) => kv.remove(v),
+            _ => false,
+        };
     }
 
     pub fn remove_vertex(&mut self, u: &T) {
-        todo!();
+        self.edges.remove(u);
     }
 
     pub fn contains_vertex(&self, u: &T) -> bool {
-        todo!();
+        self.edges.contains_key(u)
     }
 
     pub fn contains_edge(&mut self, u: &T, v: &T) -> bool {
-        todo!();
+        match self.edges.get(u) {
+            Some(hset) => hset.contains(v),
+            None => false,
+        }
     }
 
     pub fn neighbors(&self, u: &T) -> Vec<Rc<T>> {
-        todo!();
+        match self.edges.get(u) {
+            Some(hset) => hset.iter().map(|kv| kv.clone()).collect(),
+            None => vec!(),
+        }
     }
 
     pub fn path_exists_between(&self, u: &T, v: &T) -> bool {
@@ -169,4 +182,3 @@ mod tests {
         assert!(graph.contains_vertex(&"C"));
     }
 }
-
