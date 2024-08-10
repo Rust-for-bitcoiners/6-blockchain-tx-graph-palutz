@@ -20,18 +20,32 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
     }
 
     pub fn vertices(&self) -> Vec<Rc<T>> {
-        self.edges.keys().map(|k| k.clone()).collect()
+        self.edges.keys().cloned().collect::<Vec<Rc<T>>>()
     }
 
     pub fn insert_vertex(&mut self, u: T) {
-        self.edges.entry(Rc::new(u)).or_insert(HashSet::new());
+        if self.edges.contains_key(&u) == false {
+            let _ = self.edges.insert(Rc::new(u), HashSet::new());
+        }
     }
 
     pub fn insert_edge(&mut self, u: T, v: T) {
         // node u can already be in the HashMap or it is not in the HashMap
         let k = Rc::new(u);
         let rv = Rc::new(v);
-        self.edges.entry(k).and_modify(|kv| { kv.insert(rv); }).or_insert(HashSet::new());
+        // insert also the destination vertex if not already present
+        if self.edges.contains_key(&rv.clone()) == false {
+            let _ = self.edges.insert(rv.clone(), HashSet::new());
+        }
+        // check if the node u is present
+        match self.edges.get_mut(&(k.clone())) {   // get the mut (key, val) if key exists
+            Some(values) => { let _ = values.insert(rv.clone()); },
+            None => {  // otherwise create the new key, add all the values
+                let mut h : HashSet<Rc<T>> = vec!(rv.clone()).into_iter().collect();
+                self.edges.insert(k.clone(), h);
+            }
+
+        }
     }
 
     pub fn remove_edge(&mut self, u: &T, v: &T) {
@@ -64,33 +78,34 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
     }
 
     fn path_bfs(&self, start: &T, dest: &T) -> bool {
-        // fill the tovisit with the first neighbours
-        let start_vec : Vec<Rc<T>> = self.neighbors(start).iter().map(|n| n.clone()).collect();
-        let mut tovisit : VecDeque<Rc<T>> = VecDeque::from(start_vec);
+        if start == dest {
+            return true;
+        }
+        // fill the tovisit with the first set of neighbours
+        let mut tovisit : VecDeque<Rc<T>> = VecDeque::from(self.neighbors(start));
         let mut visited : HashSet<Rc<T>> = HashSet::new();
         let mut res : bool = false;
 
-        while let Some(node) = tovisit.front() {
-            println!("while let, and size = {}", tovisit.len());
-            if **node == *dest {
-                println!("node found");
+        while let Some(node) = tovisit.pop_front() {
+            let _ = visited.insert(node.clone());
+            if *node == *dest {
                 res = true;
                 break;
             }
-            let next_nodes : Vec<Rc<T>> = self.neighbors(node).iter().map(|n| n.clone()).collect();
+            let next_nodes : Vec<Rc<T>> = self.neighbors(&node).clone();
             for nn in next_nodes {
-                println!("nn in next_nodes");
                 if *nn == *dest {
-                    println!("for, node found");
                     res = true;
                     break;
                 }
-                if tovisit.contains(&nn) == false {
+                // add the node on the list to visit only if
+                // the node is not already in the list
+                // or it has not been visited already
+                if tovisit.contains(&nn) == false && visited.contains(&nn) ==  false {
                     tovisit.push_back(nn);
                 }
             }
-            if res {
-                println!("if for, node found");
+            if res == true {
                 break;
             }
         }
