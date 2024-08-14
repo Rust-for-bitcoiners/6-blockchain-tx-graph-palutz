@@ -24,39 +24,33 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
     }
 
     pub fn insert_vertex(&mut self, u: T) {
-        if self.edges.contains_key(&u) == false {
-            let _ = self.edges.insert(Rc::new(u), HashSet::new());
-        }
+        self.edges.entry(Rc::new(u)).or_insert(HashSet::new());
     }
 
     pub fn insert_edge(&mut self, u: T, v: T) {
         // node u can already be in the HashMap or it is not in the HashMap
-        let k = Rc::new(u);
+        let ru = Rc::new(u);
         let rv = Rc::new(v);
         // insert also the destination vertex if not already present
-        if self.edges.contains_key(&rv.clone()) == false {
-            let _ = self.edges.insert(rv.clone(), HashSet::new());
-        }
-        // check if the node u is present
-        match self.edges.get_mut(&(k.clone())) {   // get the mut (key, val) if key exists
-            Some(values) => { let _ = values.insert(rv.clone()); },
-            None => {  // otherwise create the new key, add all the values
-                let mut h : HashSet<Rc<T>> = vec!(rv.clone()).into_iter().collect();
-                self.edges.insert(k.clone(), h);
-            }
+        self.edges.entry(ru.clone())
+                    .and_modify(|kv| { kv.insert(rv.clone()); })
+                    .or_insert(HashSet::from([rv.clone()]));
 
-        }
+        self.edges.entry(rv.clone()).or_insert(HashSet::new());
     }
 
     pub fn remove_edge(&mut self, u: &T, v: &T) {
         let _ = match self.edges.get_mut(u) {
-            Some(kv) => kv.remove(v),
+            Some(kv) => kv.remove(v),   // remove returns T or F if the value was present in the set
             _ => false,
         };
     }
 
     pub fn remove_vertex(&mut self, u: &T) {
         self.edges.remove(u);
+        for hs in self.edges.values_mut() {
+            hs.remove(u);
+        }
     }
 
     pub fn contains_vertex(&self, u: &T) -> bool {
@@ -64,52 +58,34 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
     }
 
     pub fn contains_edge(&mut self, u: &T, v: &T) -> bool {
-        match self.edges.get(u) {
-            Some(hset) => hset.contains(v),
-            None => false,
-        }
+        self.edges.get(u).map_or(false, |hset| hset.contains(v))
     }
 
     pub fn neighbors(&self, u: &T) -> Vec<Rc<T>> {
-        match self.edges.get(u) {
-            Some(hset) => hset.iter().map(|kv| kv.clone()).collect(),
-            None => vec!(),
-        }
+        self.edges.get(u)
+                .map_or(vec!(), |hset| hset.iter()
+                .cloned().collect())
     }
 
     fn path_bfs(&self, start: &T, dest: &T) -> bool {
-        if start == dest {
-            return true;
-        }
-        // fill the tovisit with the first set of neighbours
-        let mut tovisit : VecDeque<Rc<T>> = VecDeque::from(self.neighbors(start));
-        let mut visited : HashSet<Rc<T>> = HashSet::new();
-        let mut res : bool = false;
+        let mut tovisit : VecDeque<&T> = VecDeque::new();
+        let mut visited : HashSet<&T> = HashSet::new();
 
+        tovisit.push_back(start);
         while let Some(node) = tovisit.pop_front() {
-            let _ = visited.insert(node.clone());
             if *node == *dest {
-                res = true;
-                break;
+                return true;
             }
-            let next_nodes : Vec<Rc<T>> = self.neighbors(&node).clone();
-            for nn in next_nodes {
-                if *nn == *dest {
-                    res = true;
-                    break;
+            visited.insert(node);
+            if let Some(neighbs) = self.edges.get(node) {
+                for n in neighbs {
+                    if !visited.contains(&**n) {
+                        tovisit.push_back(&**n);
+                    }
                 }
-                // add the node on the list to visit only if
-                // the node is not already in the list
-                // or it has not been visited already
-                if tovisit.contains(&nn) == false && visited.contains(&nn) ==  false {
-                    tovisit.push_back(nn);
-                }
-            }
-            if res == true {
-                break;
             }
         }
-        res
+        false
     }
 
     pub fn path_exists_between(&self, u: &T, v: &T) -> bool {
