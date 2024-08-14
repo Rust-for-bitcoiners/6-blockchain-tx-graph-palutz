@@ -67,6 +67,11 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
                 .cloned().collect())
     }
 
+    /*
+     * Breadth First Search
+     * bfs requires a queue data structure refer https://doc.rust-lang.org/std/collections/struct.VecDeque.html
+     * in both cases keep track of visited nodes using HashSet
+     */
     fn path_bfs(&self, start: &T, dest: &T) -> bool {
         let mut tovisit : VecDeque<&T> = VecDeque::new();
         let mut visited : HashSet<&T> = HashSet::new();
@@ -88,8 +93,33 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
         false
     }
 
+    /*
+     * Deep First Search
+-    * dfs requires recursion
+     * in both cases keep track of visited nodes using HashSet
+     */
+    fn path_dfs<'a>(&'a self, start: &'a T, dest: &'a T, visited : &mut HashSet<&'a T>) -> bool {
+        if *start == *dest {
+            return true;
+        }
+        let mut res : bool = false;
+        visited.insert(start);
+        if let Some(neighbs) = self.edges.get(start) {
+            for n in neighbs {
+                if !visited.contains(&**n) {
+                    res = self.path_dfs(&**n, dest, visited);
+                }
+                if res {
+                    break;
+                }
+            }
+        }
+        res
+    }
+
     pub fn path_exists_between(&self, u: &T, v: &T) -> bool {
-        self.path_bfs(u, v)
+        // self.path_bfs(u, v)
+        self.path_dfs(u, v, &mut HashSet::new())
     }
 }
 
