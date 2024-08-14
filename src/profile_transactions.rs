@@ -15,11 +15,11 @@ lazy_static! {
     };
 }
 
-fn build_transaction_graph(start_height: u64, end_height: u64) -> Graph<Txid> {
-    // Every Transaction has a set of Inputs and outputs
-    // Each Input refers to an output of some earlier transaction
-    // We say a Transaction A funds Transaction B if an ouput of A is an input of B
-    // Build a graph where nodes represents Txid and an edge (t1, t2) is in the graph
-    // if the transaction t1 funds transaction t2
-    Graph::new()
-}
+// fn build_transaction_graph(start_height: u64, end_height: u64) -> Graph<Txid> {
+//     // Every Transaction has a set of Inputs and outputs
+//     // Each Input refers to an output of some earlier transaction
+//     // We say a Transaction A funds Transaction B if an ouput of A is an input of B
+//     // Build a graph where nodes represents Txid and an edge (t1, t2) is in the graph
+//     // if the transaction t1 funds transaction t2
+//     Graph::new()
+// }
