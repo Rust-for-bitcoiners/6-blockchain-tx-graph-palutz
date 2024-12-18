@@ -29,20 +29,28 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
 
     pub fn insert_edge(&mut self, u: T, v: T) {
         // node u can already be in the HashMap or it is not in the HashMap
-        let k = Rc::new(u);
+        let ru = Rc::new(u);
         let rv = Rc::new(v);
-        self.edges.entry(k).and_modify(|kv| { kv.insert(rv); }).or_insert(HashSet::new());
+        // insert also the destination vertex if not already present
+        self.edges.entry(ru.clone())
+                    .and_modify(|kv| { kv.insert(rv.clone()); })
+                    .or_insert(HashSet::from([rv.clone()]));
+
+        self.edges.entry(rv.clone()).or_insert(HashSet::new());
     }
 
     pub fn remove_edge(&mut self, u: &T, v: &T) {
         let _ = match self.edges.get_mut(u) {
-            Some(kv) => kv.remove(v),
+            Some(kv) => kv.remove(v),   // remove returns T or F if the value was present in the set
             _ => false,
         };
     }
 
     pub fn remove_vertex(&mut self, u: &T) {
         self.edges.remove(u);
+        for hs in self.edges.values_mut() {
+            hs.remove(u);
+        }
     }
 
     pub fn contains_vertex(&self, u: &T) -> bool {
@@ -50,55 +58,68 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
     }
 
     pub fn contains_edge(&mut self, u: &T, v: &T) -> bool {
-        match self.edges.get(u) {
-            Some(hset) => hset.contains(v),
-            None => false,
-        }
+        self.edges.get(u).map_or(false, |hset| hset.contains(v))
     }
 
     pub fn neighbors(&self, u: &T) -> Vec<Rc<T>> {
-        match self.edges.get(u) {
-            Some(hset) => hset.iter().map(|kv| kv.clone()).collect(),
-            None => vec!(),
-        }
+        self.edges.get(u)
+                .map_or(vec!(), |hset| hset.iter()
+                .cloned().collect())
     }
 
+    /*
+     * Breadth First Search
+     * bfs requires a queue data structure refer https://doc.rust-lang.org/std/collections/struct.VecDeque.html
+     * in both cases keep track of visited nodes using HashSet
+     */
     fn path_bfs(&self, start: &T, dest: &T) -> bool {
-        // fill the tovisit with the first neighbours
-        let start_vec : Vec<Rc<T>> = self.neighbors(start).iter().map(|n| n.clone()).collect();
-        let mut tovisit : VecDeque<Rc<T>> = VecDeque::from(start_vec);
-        let mut visited : HashSet<Rc<T>> = HashSet::new();
-        let mut res : bool = false;
+        let mut tovisit : VecDeque<&T> = VecDeque::new();
+        let mut visited : HashSet<&T> = HashSet::new();
 
-        while let Some(node) = tovisit.front() {
-            println!("while let, and size = {}", tovisit.len());
-            if **node == *dest {
-                println!("node found");
-                res = true;
-                break;
+        tovisit.push_back(start);
+        while let Some(node) = tovisit.pop_front() {
+            if *node == *dest {
+                return true;
             }
-            let next_nodes : Vec<Rc<T>> = self.neighbors(node).iter().map(|n| n.clone()).collect();
-            for nn in next_nodes {
-                println!("nn in next_nodes");
-                if *nn == *dest {
-                    println!("for, node found");
-                    res = true;
+            visited.insert(node);
+            if let Some(neighbs) = self.edges.get(node) {
+                for n in neighbs {
+                    if !visited.contains(&**n) {
+                        tovisit.push_back(&**n);
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /*
+     * Deep First Search
+-    * dfs requires recursion
+     * in both cases keep track of visited nodes using HashSet
+     */
+    fn path_dfs<'a>(&'a self, start: &'a T, dest: &'a T, visited : &mut HashSet<&'a T>) -> bool {
+        if *start == *dest {
+            return true;
+        }
+        let mut res : bool = false;
+        visited.insert(start);
+        if let Some(neighbs) = self.edges.get(start) {
+            for n in neighbs {
+                if !visited.contains(&**n) {
+                    res = self.path_dfs(&**n, dest, visited);
+                }
+                if res {
                     break;
                 }
-                if tovisit.contains(&nn) == false {
-                    tovisit.push_back(nn);
-                }
-            }
-            if res {
-                println!("if for, node found");
-                break;
             }
         }
         res
     }
 
     pub fn path_exists_between(&self, u: &T, v: &T) -> bool {
-        self.path_bfs(u, v)
+        // self.path_bfs(u, v)
+        self.path_dfs(u, v, &mut HashSet::new())
     }
 }
 
