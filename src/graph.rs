@@ -20,11 +20,11 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
     }
 
     pub fn vertices(&self) -> Vec<Rc<T>> {
-        self.edges.keys().map(|k| k.clone()).collect()
+        self.edges.keys().cloned().collect()
     }
 
     pub fn insert_vertex(&mut self, u: T) {
-        self.edges.entry(Rc::new(u)).or_insert(HashSet::new());
+        self.edges.entry(Rc::new(u)).or_default()
     }
 
     pub fn insert_edge(&mut self, u: T, v: T) {
