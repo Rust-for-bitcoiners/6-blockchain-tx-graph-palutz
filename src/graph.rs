@@ -24,7 +24,7 @@ impl<T: Eq + PartialEq + Hash> Graph<T> {
     }
 
     pub fn insert_vertex(&mut self, u: T) {
-        self.edges.entry(Rc::new(u)).or_default()
+        self.edges.entry(Rc::new(u)).or_insert(HashSet::new());
     }
 
     pub fn insert_edge(&mut self, u: T, v: T) {
